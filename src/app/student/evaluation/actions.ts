@@ -1,6 +1,5 @@
 'use server';
 
-import { PrismaClient } from '@/app/generated/prisma';
 import prisma from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { nowUTC, isBeforeUTC, isAfterUTC } from '@/lib/date-utils';
