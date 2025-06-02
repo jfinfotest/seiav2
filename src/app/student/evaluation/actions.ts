@@ -1,10 +1,12 @@
 'use server';
 
 import { PrismaClient } from '@/app/generated/prisma';
+import prisma from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { nowUTC, isBeforeUTC, isAfterUTC } from '@/lib/date-utils';
 
-const prisma = new PrismaClient();
+// Eliminar esta línea ya que ahora importamos prisma desde lib/prisma.ts
+// const prisma = new PrismaClient();
 
 // Tipo para las respuestas del estudiante
 type StudentAnswer = {

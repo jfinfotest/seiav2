@@ -30,7 +30,7 @@ export async function evaluateStudentCode(
     }
 
     // Inicializar la API de Google Gemini   
-    const API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
+    const API_KEY = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY;
     if (!API_KEY) {
       console.error('API_KEY no configurada para Google Gemini');
       return {
