@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuLabel, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { Sun, Moon, Palette } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 
 interface ThemeToggleProps {
   className?: string;
@@ -53,6 +53,69 @@ export default function ThemeToggle({ className }: ThemeToggleProps) {
   const [mounted, setMounted] = useState(false);
   const [customTheme, setCustomTheme] = useState<string | null>(null);
 
+  // Aplicar un tema específico
+  const applyTheme = useCallback((themeValue: string) => {
+    // Eliminar cualquier clase de tema anterior
+    document.documentElement.classList.remove(
+      "purple-theme",
+      "amber-theme",
+      "blue-theme",
+      "bold-tech",
+      "notebook",
+    );
+    
+    // Guardar el tema seleccionado en localStorage para recordarlo
+    localStorage.setItem('selected-theme', themeValue);
+    
+    // Si es un tema personalizado, agregar la clase correspondiente
+    if (themeValue !== "light" && themeValue !== "dark" && themeValue !== "system") {
+      document.documentElement.classList.add(themeValue);
+      setCustomTheme(themeValue);
+      
+      // Para temas personalizados, mantener el modo claro/oscuro actual
+      const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const currentTheme = theme || 'system';
+      const isDark = currentTheme === "dark" || (currentTheme === "system" && prefersDark);
+      
+      // Aplicar el modo oscuro si corresponde
+      if (isDark) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+      
+      // Forzar la aplicación de las fuentes definidas en el tema
+      // Esto asegura que las variables CSS de fuentes se apliquen correctamente
+      setTimeout(() => {
+        const computedStyle = getComputedStyle(document.documentElement);
+        const fontSans = computedStyle.getPropertyValue('--font-sans').trim();
+        const fontMono = computedStyle.getPropertyValue('--font-mono').trim();
+        const fontSerif = computedStyle.getPropertyValue('--font-serif').trim();
+        
+        // Aplicar las fuentes directamente al body para asegurar que se apliquen
+        if (fontSans) document.body.style.fontFamily = fontSans;
+        
+        // Actualizar las variables CSS globales
+        document.documentElement.style.setProperty('--font-sans-applied', fontSans);
+        document.documentElement.style.setProperty('--font-mono-applied', fontMono);
+        document.documentElement.style.setProperty('--font-serif-applied', fontSerif);
+        
+        // Forzar actualización de estilos
+        document.body.style.cssText += ' ';
+      }, 10); // Pequeño retraso para asegurar que las clases CSS se hayan aplicado
+    } else {
+      // Para temas estándar (light/dark/system), usar next-themes
+      setTheme(themeValue);
+      setCustomTheme(null);
+      
+      // Restablecer las fuentes a las predeterminadas
+      document.body.style.fontFamily = '';
+      document.documentElement.style.removeProperty('--font-sans-applied');
+      document.documentElement.style.removeProperty('--font-mono-applied');
+      document.documentElement.style.removeProperty('--font-serif-applied');
+    }
+  }, [theme, setTheme, setCustomTheme]);
+  
   // Asegurarse de que el componente solo se renderice en el cliente
   useEffect(() => {
     setMounted(true);
@@ -67,7 +130,7 @@ export default function ThemeToggle({ className }: ThemeToggleProps) {
         setCustomTheme(savedTheme);
       }
     }
-  }, []);
+  }, [applyTheme]);
 
   // Definir los temas disponibles
   const basicThemes: ThemeOption[] = [
@@ -162,69 +225,6 @@ export default function ThemeToggle({ className }: ThemeToggleProps) {
   //   const current = customThemes.find(t => t.value === customTheme);
   //   return current ? current.name : "";
   // };
-
-  // Aplicar un tema específico
-  const applyTheme = (themeValue: string) => {
-    // Eliminar cualquier clase de tema anterior
-    document.documentElement.classList.remove(
-      "purple-theme",
-      "amber-theme",
-      "blue-theme",
-      "bold-tech",
-      "notebook",
-    );
-    
-    // Guardar el tema seleccionado en localStorage para recordarlo
-    localStorage.setItem('selected-theme', themeValue);
-    
-    // Si es un tema personalizado, agregar la clase correspondiente
-    if (themeValue !== "light" && themeValue !== "dark" && themeValue !== "system") {
-      document.documentElement.classList.add(themeValue);
-      setCustomTheme(themeValue);
-      
-      // Para temas personalizados, mantener el modo claro/oscuro actual
-      const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-      const currentTheme = theme || 'system';
-      const isDark = currentTheme === "dark" || (currentTheme === "system" && prefersDark);
-      
-      // Aplicar el modo oscuro si corresponde
-      if (isDark) {
-        document.documentElement.classList.add('dark');
-      } else {
-        document.documentElement.classList.remove('dark');
-      }
-      
-      // Forzar la aplicación de las fuentes definidas en el tema
-      // Esto asegura que las variables CSS de fuentes se apliquen correctamente
-      setTimeout(() => {
-        const computedStyle = getComputedStyle(document.documentElement);
-        const fontSans = computedStyle.getPropertyValue('--font-sans').trim();
-        const fontMono = computedStyle.getPropertyValue('--font-mono').trim();
-        const fontSerif = computedStyle.getPropertyValue('--font-serif').trim();
-        
-        // Aplicar las fuentes directamente al body para asegurar que se apliquen
-        if (fontSans) document.body.style.fontFamily = fontSans;
-        
-        // Actualizar las variables CSS globales
-        document.documentElement.style.setProperty('--font-sans-applied', fontSans);
-        document.documentElement.style.setProperty('--font-mono-applied', fontMono);
-        document.documentElement.style.setProperty('--font-serif-applied', fontSerif);
-        
-        // Forzar actualización de estilos
-        document.body.style.cssText += ' ';
-      }, 10); // Pequeño retraso para asegurar que las clases CSS se hayan aplicado
-    } else {
-      // Para temas estándar (light/dark/system), usar next-themes
-      setTheme(themeValue);
-      setCustomTheme(null);
-      
-      // Restablecer las fuentes a las predeterminadas
-      document.body.style.fontFamily = '';
-      document.documentElement.style.removeProperty('--font-sans-applied');
-      document.documentElement.style.removeProperty('--font-mono-applied');
-      document.documentElement.style.removeProperty('--font-serif-applied');
-    }
-  };
 
   // Alternar entre modo claro y oscuro
   const toggleLightDark = () => {
