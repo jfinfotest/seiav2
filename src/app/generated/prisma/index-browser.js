@@ -180,36 +180,14 @@ exports.Prisma.SortOrder = {
   desc: 'desc'
 };
 
+exports.Prisma.QueryMode = {
+  default: 'default',
+  insensitive: 'insensitive'
+};
+
 exports.Prisma.NullsOrder = {
   first: 'first',
   last: 'last'
-};
-
-exports.Prisma.EvaluationOrderByRelevanceFieldEnum = {
-  title: 'title',
-  description: 'description',
-  helpUrl: 'helpUrl'
-};
-
-exports.Prisma.QuestionOrderByRelevanceFieldEnum = {
-  text: 'text',
-  type: 'type',
-  language: 'language',
-  answer: 'answer'
-};
-
-exports.Prisma.AttemptOrderByRelevanceFieldEnum = {
-  uniqueCode: 'uniqueCode'
-};
-
-exports.Prisma.SubmissionOrderByRelevanceFieldEnum = {
-  firstName: 'firstName',
-  lastName: 'lastName',
-  email: 'email'
-};
-
-exports.Prisma.AnswerOrderByRelevanceFieldEnum = {
-  answer: 'answer'
 };
 
 
