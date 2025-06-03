@@ -894,7 +894,7 @@ function EvaluationContent() {
       }
 
       // Iniciar el temporizador de enfriamiento (10 segundos)
-      setButtonCooldown(10)
+      setButtonCooldown(20)
       const cooldownTimer = setInterval(() => {
         setButtonCooldown(prev => {
           if (prev <= 1) {
