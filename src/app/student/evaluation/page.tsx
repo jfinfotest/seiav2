@@ -92,10 +92,19 @@ type EvaluationData = {
 // Los datos de evaluación ahora se cargan desde la base de datos
 
 function EvaluationContent() {
-  const { theme } = useTheme();
+  const { theme, setTheme } = useTheme();
   const monaco = useMonaco();
   const themeInitializedRef = useRef(false);
   const previousThemeRef = useRef(theme);
+  
+  // Restaurar el tema seleccionado al cargar la página
+  useEffect(() => {
+    // Restaurar el tema seleccionado al cargar la página
+    const savedTheme = localStorage.getItem('selected-theme');
+    if (savedTheme) {
+      setTheme(savedTheme);
+    }
+  }, [setTheme]);
 
   // Nombres de los temas
   const monokaiThemeName = "monokai-custom";

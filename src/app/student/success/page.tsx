@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Button } from '@/components/ui/button'
 import { CheckCircle, AlertCircle, Loader2, Award, ChevronUp, Star } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { useTheme } from 'next-themes'
 
 // Interfaz para el reporte generado
 interface ReportResult {
@@ -24,6 +25,15 @@ function SuccessContent() {
   const alreadySubmitted = searchParams.get('alreadySubmitted') === 'true'
   const reportParam = searchParams.get('report')
   const [report, setReport] = useState<ReportResult | null>(null)
+  const { setTheme } = useTheme()
+  
+  // Restaurar el tema seleccionado al cargar la página
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('selected-theme')
+    if (savedTheme) {
+      setTheme(savedTheme)
+    }
+  }, [setTheme])
   
   // Decodificar el reporte si está disponible
   useEffect(() => {

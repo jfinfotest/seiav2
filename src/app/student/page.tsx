@@ -1,12 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { PenTool } from 'lucide-react'
+import { useTheme } from 'next-themes'
 
 
 export default function StudentEntryPage() {
@@ -15,7 +16,18 @@ export default function StudentEntryPage() {
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')  
   const [loading, setLoading] = useState(false)
+  const { setTheme } = useTheme()
   const router = useRouter()
+  
+  // Restaurar el tema seleccionado al cargar la página
+  useEffect(() => {    
+    
+    // Restaurar el tema seleccionado al cargar la página
+    const savedTheme = localStorage.getItem('selected-theme')
+    if (savedTheme) {
+      setTheme(savedTheme)
+    }
+  }, [setTheme])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

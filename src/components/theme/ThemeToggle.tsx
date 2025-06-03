@@ -115,7 +115,7 @@ export default function ThemeToggle({ className }: ThemeToggleProps) {
       document.documentElement.style.removeProperty('--font-serif-applied');
     }
   }, [theme, setTheme, setCustomTheme]);
-  
+
   // Asegurarse de que el componente solo se renderice en el cliente
   useEffect(() => {
     setMounted(true);
