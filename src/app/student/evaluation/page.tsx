@@ -204,6 +204,7 @@ function EvaluationContent() {
   const leaveTimeRef = useRef(leaveTime);
   const answersRef = useRef(answers);
   const currentQuestionIndexRef = useRef(currentQuestionIndex);
+  const isHelpModalOpenRef = useRef(isHelpModalOpen);
 
   // Calcular el progreso de la evaluación
   const calculateProgress = useCallback(() => {
@@ -220,7 +221,8 @@ function EvaluationContent() {
     leaveTimeRef.current = leaveTime;
     answersRef.current = answers;
     currentQuestionIndexRef.current = currentQuestionIndex;
-  }, [fraudAttempts, timeOutsideEval, leaveTime, answers, currentQuestionIndex]);
+    isHelpModalOpenRef.current = isHelpModalOpen;
+  }, [fraudAttempts, timeOutsideEval, leaveTime, answers, currentQuestionIndex, isHelpModalOpen]);
 
   // Cargar datos de la evaluación
   useEffect(() => {
@@ -490,6 +492,12 @@ function EvaluationContent() {
 
     // Función para registrar un intento de fraude
     const registerFraudAttempt = async (reason: string) => {
+      // Verificar si el modal de ayuda está abierto
+      if (isHelpModalOpenRef.current) {
+        console.log(`No se registra intento de fraude (${reason}) porque el modal de ayuda está abierto`);
+        return; // No registrar fraude si el modal de ayuda está abierto
+      }
+      
       // Use refs to access current state values
       const currentAnswers = answersRef.current;
       const currentIndex = currentQuestionIndexRef.current;
