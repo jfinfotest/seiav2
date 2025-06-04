@@ -9,6 +9,7 @@ import { CheckCircle, AlertCircle, Loader2, Award, ChevronUp, Star } from 'lucid
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useTheme } from 'next-themes'
 
+
 // Interfaz para el reporte generado
 interface ReportResult {
   overallFeedback: string;
