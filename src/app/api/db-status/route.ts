@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 
+// Force dynamic rendering to prevent database checks during build time
+export const dynamic = 'force-dynamic';
+
 /**
  * Endpoint para verificar la conexión a la base de datos
  * GET /api/db-status
