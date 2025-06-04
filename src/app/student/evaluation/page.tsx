@@ -5,6 +5,20 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { toUTC, isBeforeUTC, isAfterUTC, formatTimeRemaining as formatTime } from '@/lib/date-utils'
 
+// Función de debounce personalizada para reducir peticiones a la base de datos
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function debounce<T extends (...args: any) => any>(func: T, wait: number): (...args: Parameters<T>) => void {
+  let timeout: NodeJS.Timeout | null = null
+  
+  return function(...args: Parameters<T>) {
+    if (timeout) clearTimeout(timeout)
+    
+    timeout = setTimeout(() => {
+      func(...args)
+    }, wait)
+  }
+}
+
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card'
@@ -96,6 +110,20 @@ function EvaluationContent() {
   const monaco = useMonaco();
   const themeInitializedRef = useRef(false);
   const previousThemeRef = useRef(theme);
+  
+  // Referencia para la función saveAnswer para evitar importaciones dinámicas repetitivas
+  const saveAnswerRef = useRef<(
+    submissionId: number, 
+    questionId: number, 
+    answerText: string, 
+    score?: number | undefined, 
+    fraudAttempts?: number | undefined, 
+    timeOutsideEval?: number | undefined
+  ) => Promise<{ 
+    success: boolean; 
+    answer?: unknown; 
+    error?: string 
+  }>>(null);
   
   // Restaurar el tema seleccionado al cargar la página
   useEffect(() => {
@@ -197,6 +225,20 @@ function EvaluationContent() {
   const [isFraudModalOpen, setIsFraudModalOpen] = useState(false)
   const [currentFraudType, setCurrentFraudType] = useState('')
   const [currentFraudMessage, setCurrentFraudMessage] = useState('')
+  
+  // Cargar la función saveAnswer una sola vez
+  useEffect(() => {
+    const loadSaveAnswerFunction = async () => {
+      try {
+        const { saveAnswer } = await import('./actions');
+        saveAnswerRef.current = saveAnswer;
+      } catch (error) {
+        console.error('Error al cargar la función saveAnswer:', error);
+      }
+    };
+    
+    loadSaveAnswerFunction();
+  }, []);
 
   // Refs for state values needed in event handlers to avoid dependency loops
   const fraudAttemptsRef = useRef(fraudAttempts);
@@ -748,8 +790,44 @@ function EvaluationContent() {
     return formatTime(timeRemaining)
   }
 
+  // Función para actualizar contadores en la base de datos (debounced)
+  const updateCountersInDB = useCallback(async (questionId: number) => {
+    if (!submissionId) return;
+    
+    try {
+      // Usar la referencia a saveAnswer si está disponible
+      if (saveAnswerRef.current) {
+        await saveAnswerRef.current(
+          submissionId,
+          questionId,
+          '', // No enviamos el texto de la respuesta, solo actualizamos contadores
+          undefined, // Sin calificación
+          fraudAttempts, // Pasar el contador de intentos de fraude
+          timeOutsideEval // Pasar el tiempo acumulado fuera de la evaluación
+        );
+      } else {
+        // Fallback a importación dinámica si la referencia no está disponible
+        const { saveAnswer } = await import('./actions');
+        await saveAnswer(
+          submissionId,
+          questionId,
+          '', // No enviamos el texto de la respuesta, solo actualizamos contadores
+          undefined, // Sin calificación
+          fraudAttempts, // Pasar el contador de intentos de fraude
+          timeOutsideEval // Pasar el tiempo acumulado fuera de la evaluación
+        );
+      }
+    } catch (error) {
+      console.error('Error al actualizar contadores:', error);
+      // No mostramos error al usuario para no interrumpir su experiencia
+    }
+  }, [submissionId, fraudAttempts, timeOutsideEval]);
+  
+  // Versión con debounce de la función updateCountersInDB
+  const debouncedUpdateCounters = useRef(debounce(updateCountersInDB, 1000)); // 1 segundo de debounce
+
   // Manejar cambios en las respuestas
-  const handleAnswerChange = async (value: string) => {
+  const handleAnswerChange = (value: string) => {
     const updatedAnswers = [...answers]
     updatedAnswers[currentQuestionIndex].answer = value
     updatedAnswers[currentQuestionIndex].evaluated = false
@@ -757,22 +835,10 @@ function EvaluationContent() {
     setAnswers(updatedAnswers)
     setEvaluationResult(null)
 
-    // Guardar la respuesta en la base de datos si tenemos un ID de presentación
+    // Solo actualizar los contadores de fraude y tiempo con debounce
+    // La respuesta completa se guardará cuando se evalúe con Gemini
     if (submissionId) {
-      try {
-        const { saveAnswer } = await import('./actions')
-        await saveAnswer(
-          submissionId,
-          updatedAnswers[currentQuestionIndex].questionId,
-          value,
-          undefined,
-          fraudAttempts, // Pasar el contador de intentos de fraude
-          timeOutsideEval // Pasar el tiempo acumulado fuera de la evaluación
-        )
-      } catch (error) {
-        console.error('Error al guardar la respuesta:', error)
-        // No mostramos error al usuario para no interrumpir su experiencia
-      }
+      debouncedUpdateCounters.current(updatedAnswers[currentQuestionIndex].questionId);
     }
   }
 
@@ -842,13 +908,25 @@ function EvaluationContent() {
         setAnswers(updatedAnswers)
 
         // Guardar la respuesta evaluada en la base de datos
-        const { saveAnswer } = await import('./actions')
-        const saveResult = await saveAnswer(
-          submissionId,
-          currentAnswer.questionId,
-          currentAnswer.answer,
-          result.grade !== undefined ? result.grade : undefined
-        )
+        let saveResult;
+        if (saveAnswerRef.current) {
+          // Usar la referencia a saveAnswer si está disponible
+          saveResult = await saveAnswerRef.current(
+            submissionId,
+            currentAnswer.questionId,
+            currentAnswer.answer,
+            result.grade !== undefined ? result.grade : undefined
+          );
+        } else {
+          // Fallback a importación dinámica si la referencia no está disponible
+          const { saveAnswer } = await import('./actions');
+          saveResult = await saveAnswer(
+            submissionId,
+            currentAnswer.questionId,
+            currentAnswer.answer,
+            result.grade !== undefined ? result.grade : undefined
+          );
+        }
 
         if (!saveResult.success) {
           console.error('Error al guardar la respuesta evaluada:', saveResult.error)
@@ -878,13 +956,25 @@ function EvaluationContent() {
         setAnswers(updatedAnswers)
 
         // Guardar la respuesta evaluada en la base de datos
-        const { saveAnswer } = await import('./actions')
-        const saveResult = await saveAnswer(
-          submissionId,
-          currentAnswer.questionId,
-          currentAnswer.answer,
-          result.grade !== undefined ? result.grade : undefined
-        )
+        let saveResult;
+        if (saveAnswerRef.current) {
+          // Usar la referencia a saveAnswer si está disponible
+          saveResult = await saveAnswerRef.current(
+            submissionId,
+            currentAnswer.questionId,
+            currentAnswer.answer,
+            result.grade !== undefined ? result.grade : undefined
+          );
+        } else {
+          // Fallback a importación dinámica si la referencia no está disponible
+          const { saveAnswer } = await import('./actions');
+          saveResult = await saveAnswer(
+            submissionId,
+            currentAnswer.questionId,
+            currentAnswer.answer,
+            result.grade !== undefined ? result.grade : undefined
+          );
+        }
 
         if (!saveResult.success) {
           console.error('Error al guardar la respuesta evaluada:', saveResult.error)

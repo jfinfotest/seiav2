@@ -137,62 +137,80 @@ export async function createSubmission(attemptId: number, email: string, firstNa
 
 /**
  * Guarda o actualiza una respuesta individual
+ * Si score está definido, guarda la respuesta completa (evaluación con Gemini)
+ * Si score no está definido, solo actualiza los contadores de fraude y tiempo
+ * Optimizado para reducir peticiones a la base de datos
  */
 export async function saveAnswer(submissionId: number, questionId: number, answerText: string, score?: number | undefined, fraudAttempts?: number | undefined, timeOutsideEval?: number | undefined) {
   try {
-    // Buscar si ya existe una respuesta para esta pregunta en esta presentación
-    const existingAnswer = await prisma.answer.findFirst({
-      where: {
-        submissionId,
-        questionId
-      }
-    });
-
+    // Preparar operaciones a realizar
+    const operations = [];
     let answer;
-    if (existingAnswer) {
-      // Actualizar la respuesta existente
-      answer = await prisma.answer.update({
-        where: { id: existingAnswer.id },
-        data: {
-          answer: answerText,
-          score: score !== undefined ? score : existingAnswer.score
-        }
-      });
-    } else {
-      // Crear una nueva respuesta
-      answer = await prisma.answer.create({
-        data: {
-          submissionId,
-          questionId,
-          answer: answerText,
-          score
-        }
-      });
-    }
     
-    // Si se proporcionaron valores para fraudAttempts o timeOutsideEval, actualizar la submission
-    if (fraudAttempts !== undefined || timeOutsideEval !== undefined) {
-      // Obtener la submission actual
-      const submission = await prisma.submission.findUnique({
-        where: { id: submissionId }
+    // Operación 1: Guardar/actualizar la respuesta si hay una calificación
+    if (score !== undefined) {
+      // Primero buscamos si existe la respuesta
+      const existingAnswerPromise = prisma.answer.findFirst({
+        where: {
+          submissionId,
+          questionId
+        },
+        select: { id: true }
       });
       
-      if (submission) {
-        // Actualizar la submission con los valores de fraude y tiempo fuera
-        await prisma.submission.update({
+      operations.push(
+        existingAnswerPromise.then(async (existingAnswer) => {
+          if (existingAnswer) {
+            // Si existe, actualizamos
+            answer = await prisma.answer.update({
+              where: { id: existingAnswer.id },
+              data: {
+                answer: answerText,
+                score: score
+              }
+            });
+          } else {
+            // Si no existe, creamos
+            answer = await prisma.answer.create({
+              data: {
+                submissionId,
+                questionId,
+                answer: answerText,
+                score
+              }
+            });
+          }
+          return answer;
+        })
+      );
+    }
+    
+    // Operación 2: Actualizar contadores de fraude y tiempo si se proporcionaron
+    if (fraudAttempts !== undefined || timeOutsideEval !== undefined) {
+      operations.push(
+        prisma.submission.update({
           where: { id: submissionId },
           data: {
-            fraudAttempts: fraudAttempts !== undefined ? fraudAttempts : submission.fraudAttempts,
-            timeOutsideEval: timeOutsideEval !== undefined ? timeOutsideEval : submission.timeOutsideEval
+            // Si se proporcionaron valores, los usamos directamente
+            fraudAttempts: fraudAttempts !== undefined ? fraudAttempts : undefined,
+            timeOutsideEval: timeOutsideEval !== undefined ? timeOutsideEval : undefined
           }
-        });
-      }
+        })
+      );
     }
 
-    // Calcular y actualizar el promedio de calificaciones para esta submission
-    await updateSubmissionScore(submissionId);
+    // Ejecutar todas las operaciones en paralelo
+    if (operations.length > 0) {
+      await Promise.all(operations);
+    }
+    
+    // Calcular y actualizar el promedio de calificaciones si se proporcionó una calificación
+    if (score !== undefined) {
+      await updateSubmissionScore(submissionId);
+    }
 
     return { success: true, answer };
+  
   } catch (error) {
     console.error('Error al guardar la respuesta:', error);
     return { success: false, error: 'Error al guardar la respuesta' };
@@ -229,10 +247,6 @@ export async function getAnswersBySubmissionId(submissionId: number) {
 /**
  * Guarda múltiples respuestas a la vez
  */
-/**
- * Calcula y actualiza el promedio de calificaciones para una presentación
- * Asigna automáticamente 0 a las preguntas sin responder
- */
 export async function updateSubmissionScore(submissionId: number) {
   try {
     // Primero obtenemos la submission para acceder al intento y evaluación
@@ -261,7 +275,7 @@ export async function updateSubmissionScore(submissionId: number) {
     // Obtener todas las respuestas existentes para esta presentación
     const existingAnswers = await prisma.answer.findMany({
       where: { submissionId },
-      include: { question: true }
+      select: { id: true, questionId: true, score: true }
     });
 
     // Crear un mapa de respuestas por questionId para fácil acceso
@@ -270,41 +284,58 @@ export async function updateSubmissionScore(submissionId: number) {
       answerMap.set(answer.questionId, answer);
     });
 
-    // Asegurarse de que todas las preguntas tengan una respuesta con calificación
+    // Preparar operaciones en lote
+    const answersToCreate = [];
+    const answersToUpdate = [];
+
+    // Identificar preguntas sin respuesta o con respuestas sin calificación
     for (const question of questions) {
       const existingAnswer = answerMap.get(question.id);
       
       if (!existingAnswer) {
-        // Si no existe respuesta, crear una con calificación 0
-        await prisma.answer.create({
-          data: {
-            submissionId,
-            questionId: question.id,
-            answer: '', // Respuesta vacía
-            score: 0 // Asignar 0 puntos
-          }
+        // Si no existe respuesta, añadir a la lista para crear en lote
+        answersToCreate.push({
+          submissionId,
+          questionId: question.id,
+          answer: '', // Respuesta vacía
+          score: 0 // Asignar 0 puntos
         });
       } else if (existingAnswer.score === null) {
-        // Si existe pero no tiene calificación, actualizar con calificación 0
-        await prisma.answer.update({
-          where: { id: existingAnswer.id },
-          data: { score: 0 }
+        // Si existe pero no tiene calificación, añadir a la lista para actualizar
+        answersToUpdate.push({
+          id: existingAnswer.id,
+          score: 0
         });
       }
     }
 
-    // Obtener todas las respuestas actualizadas
-    const allAnswers = await prisma.answer.findMany({
+    // Ejecutar operaciones en paralelo
+    await Promise.all([
+      // Crear respuestas faltantes en lote (si hay alguna)
+      answersToCreate.length > 0 ? 
+        prisma.answer.createMany({
+          data: answersToCreate,
+          skipDuplicates: true
+        }) : Promise.resolve(),
+      
+      // Actualizar respuestas sin calificación en paralelo
+      ...answersToUpdate.map(answer => 
+        prisma.answer.update({
+          where: { id: answer.id },
+          data: { score: answer.score }
+        })
+      )
+    ]);
+
+    // Calcular el promedio directamente en la base de datos usando una consulta agregada
+    const aggregateResult = await prisma.answer.aggregate({
       where: { submissionId },
-      select: { score: true }
+      _avg: { score: true },
+      _count: { score: true }
     });
     
-    // Calcular el promedio de todas las respuestas (ahora todas tienen calificación)
-    let averageScore = 0;
-    if (allAnswers.length > 0) {
-      const totalScore = allAnswers.reduce((sum, answer) => sum + (answer.score || 0), 0);
-      averageScore = totalScore / allAnswers.length;
-    }
+    // Obtener el promedio calculado
+    const averageScore = aggregateResult._avg.score || 0;
 
     // Actualizar el campo score en la presentación
     await prisma.submission.update({
@@ -319,33 +350,100 @@ export async function updateSubmissionScore(submissionId: number) {
   }
 }
 
+/**
+ * Guarda múltiples respuestas a la vez
+ * Optimizado para reducir peticiones a la base de datos procesando respuestas en paralelo
+ */
 export async function saveAnswers(submissionId: number, answers: StudentAnswer[]) {
   try {
-    const savedAnswers = [];
+    if (!answers || answers.length === 0) {
+      return { success: false, error: 'No hay respuestas para guardar' };
+    }
+
+    // Obtener todas las respuestas existentes para esta presentación
+    const existingAnswersResult = await prisma.answer.findMany({
+      where: {
+        submissionId,
+        questionId: { in: answers.map(a => a.questionId) }
+      },
+      select: {
+        id: true,
+        questionId: true
+      }
+    });
+
+    // Crear un mapa de respuestas existentes por questionId para fácil acceso
+    const existingAnswersMap = new Map();
+    existingAnswersResult.forEach(answer => {
+      existingAnswersMap.set(answer.questionId, answer);
+    });
+
+    // Separar respuestas en nuevas y existentes
+    const newAnswers = [];
+    const updateOperations = [];
     
+    // Clasificar las respuestas
     for (const answer of answers) {
-      const result = await saveAnswer(
-        submissionId, 
-        answer.questionId, 
-        answer.answer, 
-        answer.score !== null ? answer.score : undefined
-        // Ya no pasamos fraudAttempts porque ahora se maneja a nivel de Submission
-      );
+      const existingAnswer = existingAnswersMap.get(answer.questionId);
       
-      if (result.success) {
-        savedAnswers.push(result.answer);
+      if (existingAnswer) {
+        // Si la respuesta ya existe, actualizarla
+        updateOperations.push(
+          prisma.answer.update({
+            where: { id: existingAnswer.id },
+            data: {
+              answer: answer.answer,
+              score: answer.score !== null ? answer.score : undefined
+            }
+          })
+        );
+      } else {
+        // Si es una nueva respuesta, añadirla a la lista para crear
+        newAnswers.push({
+          submissionId,
+          questionId: answer.questionId,
+          answer: answer.answer,
+          score: answer.score !== null ? answer.score : undefined
+        });
       }
     }
+
+    // Ejecutar operaciones en paralelo
+    await Promise.all([
+      // Crear nuevas respuestas en lote si hay alguna
+      newAnswers.length > 0 ? 
+        prisma.answer.createMany({
+          data: newAnswers,
+          skipDuplicates: true
+        }) : Promise.resolve(),
+      
+      // Ejecutar todas las actualizaciones en paralelo
+      ...updateOperations
+    ]);
 
     // Calcular y actualizar el promedio de calificaciones
     await updateSubmissionScore(submissionId);
 
-    return { success: true, answers: savedAnswers };
+    // Obtener todas las respuestas actualizadas
+    const savedAnswersResult = await prisma.answer.findMany({
+      where: {
+        submissionId,
+        questionId: { in: answers.map(a => a.questionId) }
+      }
+    });
+
+    return { success: true, answers: savedAnswersResult };
   } catch (error) {
     console.error('Error al guardar las respuestas:', error);
     return { success: false, error: 'Error al guardar las respuestas' };
   }
 }
+
+/**
+ * Calcula y actualiza el promedio de calificaciones para una presentación
+ * Asigna automáticamente 0 a las preguntas sin responder
+ * Optimizado para reducir peticiones a la base de datos
+ */
 
 /**
  * Finaliza una presentación marcándola como enviada y genera un reporte de resultados

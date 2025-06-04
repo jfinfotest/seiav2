@@ -228,8 +228,28 @@ export default function ThemeToggle({ className }: ThemeToggleProps) {
 
   // Alternar entre modo claro y oscuro
   const toggleLightDark = () => {
-    const newTheme = theme === "dark" ? "light" : "dark";
-    applyTheme(newTheme);
+    // Si hay un tema personalizado activo, solo cambiamos el modo claro/oscuro
+    // pero mantenemos el tema personalizado
+    if (customTheme) {
+      const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const currentTheme = theme || 'system';
+      const isDark = currentTheme === "dark" || (currentTheme === "system" && prefersDark);
+      
+      // Cambiar entre modo claro y oscuro manteniendo el tema personalizado
+      if (isDark) {
+        document.documentElement.classList.remove('dark');
+      } else {
+        document.documentElement.classList.add('dark');
+      }
+      
+      // Actualizar el tema en next-themes para mantener la consistencia
+      const newTheme = isDark ? "light" : "dark";
+      setTheme(newTheme);
+    } else {
+      // Si no hay tema personalizado, simplemente alternamos entre light y dark
+      const newTheme = theme === "dark" ? "light" : "dark";
+      applyTheme(newTheme);
+    }
   };
 
   if (!mounted) {

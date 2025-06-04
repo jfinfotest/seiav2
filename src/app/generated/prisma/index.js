@@ -35,12 +35,12 @@ exports.Prisma = Prisma
 exports.$Enums = {}
 
 /**
- * Prisma Client JS version: 6.8.2
- * Query Engine version: 2060c79ba17c6bb9f5823312b6f6b7f4a845738e
+ * Prisma Client JS version: 6.9.0
+ * Query Engine version: 81e4af48011447c3cc503a190e86995b66d2a28e
  */
 Prisma.prismaVersion = {
-  client: "6.8.2",
-  engine: "2060c79ba17c6bb9f5823312b6f6b7f4a845738e"
+  client: "6.9.0",
+  engine: "81e4af48011447c3cc503a190e86995b66d2a28e"
 }
 
 Prisma.PrismaClientKnownRequestError = PrismaClientKnownRequestError;
@@ -204,13 +204,12 @@ const config = {
     "schemaEnvPath": "../../../../.env"
   },
   "relativePath": "../../../../prisma",
-  "clientVersion": "6.8.2",
-  "engineVersion": "2060c79ba17c6bb9f5823312b6f6b7f4a845738e",
+  "clientVersion": "6.9.0",
+  "engineVersion": "81e4af48011447c3cc503a190e86995b66d2a28e",
   "datasourceNames": [
     "db"
   ],
   "activeProvider": "postgresql",
-  "postinstall": false,
   "inlineDatasources": {
     "db": {
       "url": {
@@ -221,7 +220,7 @@ const config = {
   },
   "inlineSchema": "// This is your Prisma schema file,\n// learn more about it in the docs: https://pris.ly/d/prisma-schema\n\n// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?\n// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init\n\ngenerator client {\n  provider = \"prisma-client-js\"\n  output   = \"../src/app/generated/prisma\"\n}\n\ndatasource db {\n  provider = \"postgresql\"\n  url      = env(\"DATABASE_URL\")\n}\n\n// Modelo para Evaluación\nmodel Evaluation {\n  id          Int        @id @default(autoincrement())\n  title       String\n  description String?\n  helpUrl     String? // URL de ayuda o recursos adicionales\n  createdAt   DateTime   @default(now())\n  updatedAt   DateTime   @updatedAt\n  questions   Question[] @relation(\"EvaluationQuestions\")\n  attempts    Attempt[]  @relation(\"EvaluationAttempts\")\n}\n\n// Modelo para Pregunta\nmodel Question {\n  id           Int        @id @default(autoincrement())\n  evaluationId Int\n  evaluation   Evaluation @relation(\"EvaluationQuestions\", fields: [evaluationId], references: [id], onDelete: Cascade)\n  text         String     @db.Text // Contenido del editor markdown\n  type         String //\"Code\", \"Text\".\n  language     String? // Lenguaje de programación para preguntas de tipo CODE\n  answer       String?    @db.Text // Respuesta \n  createdAt    DateTime   @default(now())\n  updatedAt    DateTime   @updatedAt\n  answers      Answer[]   @relation(\"QuestionAnswers\")\n}\n\n// Modelo para Intento (Attempt)\nmodel Attempt {\n  id             Int          @id @default(autoincrement())\n  evaluationId   Int\n  evaluation     Evaluation   @relation(\"EvaluationAttempts\", fields: [evaluationId], references: [id], onDelete: Cascade)\n  uniqueCode     String       @unique @db.VarChar(8) // Código de 8 caracteres\n  startTime      DateTime\n  endTime        DateTime\n  maxSubmissions Int? // Máximo número de presentaciones permitidas\n  createdAt      DateTime     @default(now())\n  updatedAt      DateTime     @updatedAt\n  submissions    Submission[] @relation(\"AttemptSubmissions\")\n}\n\n// Modelo para Presentación (Submission)\nmodel Submission {\n  id              Int       @id @default(autoincrement())\n  attemptId       Int\n  attempt         Attempt   @relation(\"AttemptSubmissions\", fields: [attemptId], references: [id], onDelete: Cascade)\n  firstName       String // Nombre del estudiante\n  lastName        String // Apellido del estudiante\n  email           String // Correo electrónico del estudiante\n  score           Float? // Calificación (añadido previamente)\n  fraudAttempts   Int       @default(0) // Contador de intentos de fraude\n  timeOutsideEval Int       @default(0) // Tiempo acumulado (en segundos) que el estudiante permanece fuera de la evaluación\n  submittedAt     DateTime? // Fecha y hora de envío\n  createdAt       DateTime  @default(now())\n  updatedAt       DateTime  @updatedAt\n  answersList     Answer[]  @relation(\"SubmissionAnswers\")\n}\n\n// Modelo para Respuesta (Answer)\nmodel Answer {\n  id           Int        @id @default(autoincrement())\n  submissionId Int\n  submission   Submission @relation(\"SubmissionAnswers\", fields: [submissionId], references: [id], onDelete: Cascade)\n  questionId   Int\n  question     Question   @relation(\"QuestionAnswers\", fields: [questionId], references: [id], onDelete: Cascade)\n  answer       String     @db.Text // Respuesta del estudiante\n  score        Float? // Puntuación específica de esta respuesta (opcional)\n  createdAt    DateTime   @default(now())\n  updatedAt    DateTime   @updatedAt\n}\n",
   "inlineSchemaHash": "2ddec2d2a57c13908ef40e9ce394ec2048ce73adb82e7b8fa88e747f9d8994e0",
-  "copyEngine": false
+  "copyEngine": true
 }
 
 const fs = require('fs')
@@ -258,3 +257,9 @@ const PrismaClient = getPrismaClient(config)
 exports.PrismaClient = PrismaClient
 Object.assign(exports, Prisma)
 
+// file annotations for bundling tools to include these files
+path.join(__dirname, "query_engine-windows.dll.node");
+path.join(process.cwd(), "src/app/generated/prisma/query_engine-windows.dll.node")
+// file annotations for bundling tools to include these files
+path.join(__dirname, "schema.prisma");
+path.join(process.cwd(), "src/app/generated/prisma/schema.prisma")
