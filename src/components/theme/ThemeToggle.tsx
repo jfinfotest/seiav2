@@ -57,11 +57,15 @@ export default function ThemeToggle({ className }: ThemeToggleProps) {
   useEffect(() => {
     setMounted(true);
     
-    // Restaurar el tema personalizado si existe en localStorage
+    // Restaurar el tema personalizado si existe en localStorage o establecer blue-theme por defecto
     if (typeof window !== 'undefined') {
       const savedTheme = localStorage.getItem('selected-theme');
       if (savedTheme && savedTheme !== 'light' && savedTheme !== 'dark' && savedTheme !== 'system') {
         setCustomTheme(savedTheme);
+      } else {
+        // Establecer blue-theme como predeterminado si no hay tema guardado
+        setCustomTheme('blue-theme');
+        applyTheme('blue-theme');
       }
     }
   }, []);
@@ -150,8 +154,9 @@ export default function ThemeToggle({ className }: ThemeToggleProps) {
         setCustomTheme(savedTheme);
       }
     } else {
-      // Si no hay tema guardado, respetar el tema predeterminado del ThemeProvider (dark)
-      applyTheme("dark");
+      // Si no hay tema guardado, aplicar blue-theme como predeterminado
+      applyTheme("blue-theme");
+      setCustomTheme("blue-theme");
     }
   }, [applyTheme]);
 
