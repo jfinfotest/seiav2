@@ -52,9 +52,25 @@ export default function ThemeToggle({ className }: ThemeToggleProps) {
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const [customTheme, setCustomTheme] = useState<string | null>(null);
+  
+  // Asegurarse de que el componente esté montado antes de realizar operaciones del lado del cliente
+  useEffect(() => {
+    setMounted(true);
+    
+    // Restaurar el tema personalizado si existe en localStorage
+    if (typeof window !== 'undefined') {
+      const savedTheme = localStorage.getItem('selected-theme');
+      if (savedTheme && savedTheme !== 'light' && savedTheme !== 'dark' && savedTheme !== 'system') {
+        setCustomTheme(savedTheme);
+      }
+    }
+  }, []);
 
   // Aplicar un tema específico
   const applyTheme = useCallback((themeValue: string) => {
+    // Solo ejecutar en el cliente
+    if (typeof window === 'undefined') return;
+    
     // Eliminar cualquier clase de tema anterior
     document.documentElement.classList.remove(
       "purple-theme",
@@ -77,11 +93,15 @@ export default function ThemeToggle({ className }: ThemeToggleProps) {
       const currentTheme = theme || 'system';
       const isDark = currentTheme === "dark" || (currentTheme === "system" && prefersDark);
       
-      // Aplicar el modo oscuro si corresponde
+      // Mantener el modo oscuro/claro actual usando setTheme
       if (isDark) {
         document.documentElement.classList.add('dark');
+        // Asegurarse de que next-themes sepa que estamos en modo oscuro
+        setTheme('dark');
       } else {
         document.documentElement.classList.remove('dark');
+        // Asegurarse de que next-themes sepa que estamos en modo claro
+        setTheme('light');
       }
       
       // Forzar la aplicación de las fuentes definidas en el tema
@@ -129,6 +149,9 @@ export default function ThemeToggle({ className }: ThemeToggleProps) {
       if (savedTheme !== "light" && savedTheme !== "dark" && savedTheme !== "system") {
         setCustomTheme(savedTheme);
       }
+    } else {
+      // Si no hay tema guardado, respetar el tema predeterminado del ThemeProvider (dark)
+      applyTheme("dark");
     }
   }, [applyTheme]);
 
@@ -238,13 +261,14 @@ export default function ThemeToggle({ className }: ThemeToggleProps) {
       // Cambiar entre modo claro y oscuro manteniendo el tema personalizado
       if (isDark) {
         document.documentElement.classList.remove('dark');
+        setTheme("light");
       } else {
         document.documentElement.classList.add('dark');
+        setTheme("dark");
       }
       
-      // Actualizar el tema en next-themes para mantener la consistencia
-      const newTheme = isDark ? "light" : "dark";
-      setTheme(newTheme);
+      // Guardar el tema personalizado en localStorage para mantenerlo
+      localStorage.setItem('selected-theme', customTheme);
     } else {
       // Si no hay tema personalizado, simplemente alternamos entre light y dark
       const newTheme = theme === "dark" ? "light" : "dark";
@@ -267,6 +291,13 @@ export default function ThemeToggle({ className }: ThemeToggleProps) {
     );
   }
 
+  // Evitar renderizado en el servidor para prevenir errores de hidratación
+  if (!mounted) {
+    return <Button variant="ghost" size="icon" className={cn("w-9 h-9", className)} disabled>
+      <Palette className="h-4 w-4" />
+    </Button>;
+  }
+  
   return (
     <div className={cn("flex gap-2", className)}>
       {/* Botón para alternar entre claro y oscuro */}

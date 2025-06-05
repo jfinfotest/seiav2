@@ -21,11 +21,29 @@ export default function StudentEntryPage() {
   
   // Restaurar el tema seleccionado al cargar la página
   useEffect(() => {    
+    // Asegurarse de que el código se ejecute solo en el cliente
+    if (typeof window === 'undefined') return;
     
     // Restaurar el tema seleccionado al cargar la página
     const savedTheme = localStorage.getItem('selected-theme')
     if (savedTheme) {
-      setTheme(savedTheme)
+      // Si es un tema personalizado, necesitamos manejar el modo oscuro/claro por separado
+      if (savedTheme !== 'light' && savedTheme !== 'dark' && savedTheme !== 'system') {
+        // Aplicar el tema personalizado
+        document.documentElement.classList.add(savedTheme);
+        
+        // Mantener el modo oscuro/claro actual
+        const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        const isDark = localStorage.getItem('theme') === 'dark' || 
+                      (localStorage.getItem('theme') === 'system' && prefersDark) ||
+                      (!localStorage.getItem('theme') && prefersDark);
+        
+        // Aplicar el modo oscuro/claro según corresponda
+        setTheme(isDark ? 'dark' : 'light');
+      } else {
+        // Si no es un tema personalizado, simplemente aplicar el tema
+        setTheme(savedTheme);
+      }
     }
   }, [setTheme])
 
