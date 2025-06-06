@@ -66,6 +66,8 @@ const LANGUAGE_OPTIONS = [
   { value: 'sql', label: 'SQL' },
   { value: 'html', label: 'HTML' },
   { value: 'css', label: 'CSS' },
+  { value: 'json', label: 'JSON' },
+  { value: 'jsx', label: 'JSX' },
 ]
 
 // Servicios para evaluar con Gemini AI
