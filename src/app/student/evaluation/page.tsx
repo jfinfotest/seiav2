@@ -9,10 +9,10 @@ import { toUTC, isBeforeUTC, isAfterUTC, formatTimeRemaining as formatTime } fro
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function debounce<T extends (...args: any) => any>(func: T, wait: number): (...args: Parameters<T>) => void {
   let timeout: NodeJS.Timeout | null = null
-  
-  return function(...args: Parameters<T>) {
+
+  return function (...args: Parameters<T>) {
     if (timeout) clearTimeout(timeout)
-    
+
     timeout = setTimeout(() => {
       func(...args)
     }, wait)
@@ -112,29 +112,29 @@ function EvaluationContent() {
   const monaco = useMonaco();
   const themeInitializedRef = useRef(false);
   const previousThemeRef = useRef(theme);
-  
+
   // Referencia para la función saveAnswer para evitar importaciones dinámicas repetitivas
   const saveAnswerRef = useRef<(
-    submissionId: number, 
-    questionId: number, 
-    answerText: string, 
-    score?: number | undefined, 
-    fraudAttempts?: number | undefined, 
+    submissionId: number,
+    questionId: number,
+    answerText: string,
+    score?: number | undefined,
+    fraudAttempts?: number | undefined,
     timeOutsideEval?: number | undefined
-  ) => Promise<{ 
-    success: boolean; 
-    answer?: unknown; 
-    error?: string 
+  ) => Promise<{
+    success: boolean;
+    answer?: unknown;
+    error?: string
   }>>(null);
-  
+
   // Estado para controlar si el componente está montado en el cliente
   const [mounted, setMounted] = useState(false);
-  
+
   // Asegurarse de que el componente esté montado antes de acceder a localStorage
   useEffect(() => {
     setMounted(true);
   }, []);
-  
+
   // Restaurar el tema seleccionado al cargar la página
   useEffect(() => {
     // Solo ejecutar en el cliente después de que el componente esté montado
@@ -145,13 +145,13 @@ function EvaluationContent() {
         if (savedTheme !== 'light' && savedTheme !== 'dark' && savedTheme !== 'system') {
           // Aplicar el tema personalizado
           document.documentElement.classList.add(savedTheme);
-          
+
           // Mantener el modo oscuro/claro actual
           const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-          const isDark = localStorage.getItem('theme') === 'dark' || 
-                        (localStorage.getItem('theme') === 'system' && prefersDark) ||
-                        (!localStorage.getItem('theme') && prefersDark);
-          
+          const isDark = localStorage.getItem('theme') === 'dark' ||
+            (localStorage.getItem('theme') === 'system' && prefersDark) ||
+            (!localStorage.getItem('theme') && prefersDark);
+
           // Aplicar el modo oscuro/claro según corresponda
           setTheme(isDark ? 'dark' : 'light');
         } else {
@@ -253,7 +253,7 @@ function EvaluationContent() {
   const [isFraudModalOpen, setIsFraudModalOpen] = useState(false)
   const [currentFraudType, setCurrentFraudType] = useState('')
   const [currentFraudMessage, setCurrentFraudMessage] = useState('')
-  
+
   // Cargar la función saveAnswer una sola vez
   useEffect(() => {
     const loadSaveAnswerFunction = async () => {
@@ -264,7 +264,7 @@ function EvaluationContent() {
         console.error('Error al cargar la función saveAnswer:', error);
       }
     };
-    
+
     loadSaveAnswerFunction();
   }, []);
 
@@ -319,7 +319,7 @@ function EvaluationContent() {
             router.push(`/student/success?alreadySubmitted=true&code=${uniqueCode}`)
             return // No cambiar el estado de loading para evitar mostrar el error
           }
-          
+
           // Verificar si el error es debido a que la evaluación ha expirado
           if (attemptResult.error === 'La evaluación ya ha finalizado' ||
             attemptResult.error === 'La evaluación aún no ha comenzado') {
@@ -328,7 +328,7 @@ function EvaluationContent() {
             setLoading(false)
             return
           }
-          
+
           // Para otros errores, mostrar mensaje de error y establecer estado
           console.error(attemptResult.error)
           setErrorMessage(attemptResult.error || 'Error al cargar la evaluación')
@@ -567,7 +567,7 @@ function EvaluationContent() {
         console.log(`No se registra intento de fraude (${reason}) porque el modal de ayuda está abierto`);
         return; // No registrar fraude si el modal de ayuda está abierto
       }
-      
+
       // Use refs to access current state values
       const currentAnswers = answersRef.current;
       const currentIndex = currentQuestionIndexRef.current;
@@ -662,9 +662,9 @@ function EvaluationContent() {
     // };
 
     // 5. Detector de cambios en localStorage (posible comunicación entre pestañas)
-    const handleStorageChange = async () => {
-      registerFraudAttempt('cambio en almacenamiento local');
-    };
+    // const handleStorageChange = async () => {
+    //   registerFraudAttempt('cambio en almacenamiento local');
+    // };
 
     // 6. Detector de teclas sospechosas (Alt+Tab, Windows, etc.)
     const handleKeyDown = async (e: KeyboardEvent) => {
@@ -672,9 +672,9 @@ function EvaluationContent() {
       if ((e.altKey && e.key === 'Tab') || // Alt+Tab
         e.key === 'Meta' || // Tecla Windows/Command
         (e.ctrlKey && e.key === 'Escape') || // Ctrl+Esc (Menú inicio en Windows)
-        (e.altKey && e.key === 'F4') || // Alt+F4
-        (e.ctrlKey && e.key === 'w') || // Ctrl+W (cerrar pestaña)
-        (e.ctrlKey && e.key === 't') || // Ctrl+T (nueva pestaña)
+        // (e.altKey && e.key === 'F4') || // Alt+F4
+        // (e.ctrlKey && e.key === 'w') || // Ctrl+W (cerrar pestaña)
+        // (e.ctrlKey && e.key === 't') || // Ctrl+T (nueva pestaña)
         (e.ctrlKey && e.key === 'n')) { // Ctrl+N (nueva ventana)
         registerFraudAttempt(`uso de tecla sospechosa: ${e.key}`);
         e.preventDefault();
@@ -692,11 +692,11 @@ function EvaluationContent() {
     };
 
     // 8. Detector de pantalla completa
-    const handleFullscreenChange = async () => {
-      if (!document.fullscreenElement) {
-        registerFraudAttempt('salida de pantalla completa');
-      }
-    };
+    // const handleFullscreenChange = async () => {
+    //   if (!document.fullscreenElement) {
+    //     registerFraudAttempt('salida de pantalla completa');
+    //   }
+    // };
 
     // 9. Detector de copiar/pegar (prevenir copiar respuestas o pegar soluciones)
     const handleCopy = async (e: ClipboardEvent) => {
@@ -764,10 +764,10 @@ function EvaluationContent() {
     window.addEventListener('blur', handleWindowBlur);
     window.addEventListener('focus', handleWindowFocus);
     // document.addEventListener('mouseleave', handleMouseLeave);
-    window.addEventListener('storage', handleStorageChange);
+    // window.addEventListener('storage', handleStorageChange);
     document.addEventListener('keydown', handleKeyDown, true);
     window.addEventListener('resize', handleResize);
-    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    // document.addEventListener('fullscreenchange', handleFullscreenChange);
     document.addEventListener('copy', handleCopy);
     document.addEventListener('paste', handlePaste);
     // Eliminamos la detección de menú contextual para permitir su uso normal en la aplicación
@@ -794,10 +794,10 @@ function EvaluationContent() {
       window.removeEventListener('blur', handleWindowBlur);
       window.removeEventListener('focus', handleWindowFocus);
       // document.removeEventListener('mouseleave', handleMouseLeave);
-      window.removeEventListener('storage', handleStorageChange);
+      // window.removeEventListener('storage', handleStorageChange);
       document.removeEventListener('keydown', handleKeyDown, true);
       window.removeEventListener('resize', handleResize);
-      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      // document.removeEventListener('fullscreenchange', handleFullscreenChange);
       document.removeEventListener('copy', handleCopy);
       document.removeEventListener('paste', handlePaste);
       // document.removeEventListener('contextmenu', handleContextMenu);
@@ -821,7 +821,7 @@ function EvaluationContent() {
   // Función para actualizar contadores en la base de datos (debounced)
   const updateCountersInDB = useCallback(async (questionId: number) => {
     if (!submissionId) return;
-    
+
     try {
       // Usar la referencia a saveAnswer si está disponible
       if (saveAnswerRef.current) {
@@ -850,7 +850,7 @@ function EvaluationContent() {
       // No mostramos error al usuario para no interrumpir su experiencia
     }
   }, [submissionId, fraudAttempts, timeOutsideEval]);
-  
+
   // Versión con debounce de la función updateCountersInDB
   const debouncedUpdateCounters = useRef(debounce(updateCountersInDB, 1000)); // 1 segundo de debounce
 
@@ -1167,7 +1167,7 @@ function EvaluationContent() {
       </div>
     )
   }
-  
+
   if (!evaluation) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -1304,11 +1304,11 @@ function EvaluationContent() {
                           </TooltipContent>
                         </Tooltip>
                       )}
-                      
+
                       {fraudAttempts > 0 && timeOutsideEval > 0 && (
                         <div className="h-4 w-px bg-white/30"></div>
                       )}
-                      
+
                       {timeOutsideEval > 0 && (
                         <Tooltip>
                           <TooltipTrigger asChild>
@@ -1405,20 +1405,22 @@ function EvaluationContent() {
                 {currentQuestion.type === 'CODE' ? 'Código' : 'Texto'}
               </span>
             </CardTitle>
-          </CardHeader>
-          <CardContent className="flex-grow overflow-auto p-3 sm:p-4 min-h-[300px] sm:min-h-[400px] h-auto">
-            <div data-color-mode={theme === 'dark' ? 'dark' : 'light'} className="h-full rounded-lg">
+          </CardHeader>          <CardContent className="flex-grow p-3 sm:p-4 min-h-[300px] sm:min-h-[400px] h-full relative">
+            <div data-color-mode={theme === 'dark' ? 'dark' : 'light'} className="absolute inset-0 rounded-lg overflow-hidden">
               <MDPreview
                 source={currentQuestion.text}
                 style={{
                   padding: window.innerWidth < 640 ? '1rem' : '0.75rem',
                   height: '100%',
+                  width: '100%',
                   borderRadius: '0.75rem',
                   color: 'var(--foreground)',
                   backgroundColor: theme === 'dark' ? 'var(--secondary)' : 'var(--background)',
                   overflowY: 'auto',
                   fontSize: window.innerWidth < 640 ? '1.1rem' : '1rem',
-                  lineHeight: '1.6'
+                  lineHeight: '1.6',
+                  position: 'absolute',
+                  inset: 0,
                 }}
               />
             </div>
@@ -1471,8 +1473,7 @@ function EvaluationContent() {
                 </Button>
               </div>
             </CardTitle>
-          </CardHeader>
-          <CardContent className="flex-grow overflow-auto p-3 sm:p-4 min-h-[300px] sm:min-h-[400px] h-auto">
+          </CardHeader>          <CardContent className="flex-grow p-3 sm:p-4 min-h-[300px] sm:min-h-[400px] h-full relative">
             {currentQuestion.type === 'CODE' ? (
               <div className="h-full" style={{ minHeight: window.innerWidth < 640 ? '400px' : '350px' }}>
                 <MonacoEditor
@@ -1540,35 +1541,51 @@ function EvaluationContent() {
                       });
                     };
 
+
+
+                    // Override default copy command (Ctrl+C or context menu)
+                    editor.addCommand(monaco.KeyCode.KeyC | monaco.KeyMod.CtrlCmd, () => {
+                      // Do nothing to disable copy
+                    });
+
+                    // Override default cut command (Ctrl+X or context menu)
+                    editor.addCommand(monaco.KeyCode.KeyX | monaco.KeyMod.CtrlCmd, () => {
+                      // Do nothing to disable cut
+                    });
+
+                    // Override default paste command (Ctrl+V or context menu)
+                    editor.addCommand(monaco.KeyCode.KeyV | monaco.KeyMod.CtrlCmd, () => {
+                      // Do nothing to disable paste
+                    });
+
                     window.addEventListener('resize', updateEditorOptions);
                     return () => window.removeEventListener('resize', updateEditorOptions);
                   }}
                 />
+              </div>            ) : (
+              <div className="absolute inset-0 m-3 sm:m-4">
+                <Textarea
+                  placeholder="Escribe tu respuesta aquí..."
+                  value={currentAnswer.answer}
+                  onChange={(e) => handleAnswerChange(e.target.value)}
+                  className="w-full h-full resize-none rounded-lg"
+                  style={{
+                    position: 'absolute',
+                    inset: 0,
+                    fontSize: window.innerWidth < 640 ? '1.2rem' : '1.2rem',
+                    padding: window.innerWidth < 640 ? '16px' : '12px',
+                    lineHeight: '1.6',
+                    overflowY: 'auto'
+                  }}
+                  spellCheck={true}
+                  onKeyDown={(e) => {
+                    // Prevenir Ctrl+C, Ctrl+V, Ctrl+X
+                    if ((e.ctrlKey || e.metaKey) && (e.key === 'c' || e.key === 'v' || e.key === 'x')) {
+                      e.preventDefault();
+                    }
+                  }}
+                />
               </div>
-            ) : (
-              <Textarea
-                placeholder="Escribe tu respuesta aquí..."
-                value={currentAnswer.answer}
-                onChange={(e) => handleAnswerChange(e.target.value)}
-                className="resize-none h-full rounded-lg bg-card text-card-foreground border border-border focus:ring-2 focus:ring-primary focus:border-primary overflow-y-auto"
-                style={{
-                  width: '100%',
-                  height: '100%',
-                  minHeight: window.innerWidth < 640 ? '400px' : '350px',
-                  display: 'block',
-                  borderRadius: '0.75rem',
-                  fontSize: window.innerWidth < 640 ? '1.2rem' : '1.2rem',
-                  padding: window.innerWidth < 640 ? '16px' : '12px',
-                  lineHeight: '1.6',
-                }}
-                spellCheck={true}
-                onKeyDown={(e) => {
-                  // Prevenir Ctrl+C, Ctrl+V, Ctrl+X
-                  if ((e.ctrlKey || e.metaKey) && (e.key === 'c' || e.key === 'v' || e.key === 'x')) {
-                    e.preventDefault();
-                  }
-                }}
-              />
             )}
           </CardContent>
         </Card>
