@@ -1191,7 +1191,7 @@ function EvaluationContent() {
 
   // Determinar el lenguaje de programación para preguntas de código
   let language = 'javascript'
-  if (currentQuestion.type === 'CODE' && currentQuestion.answer) {
+  if (currentQuestion && currentQuestion.type === 'CODE' && currentQuestion.answer) {
     try {
       const answerData = JSON.parse(currentQuestion.answer)
       language = answerData.language || 'javascript'
