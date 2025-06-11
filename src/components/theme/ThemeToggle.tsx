@@ -53,23 +53,6 @@ export default function ThemeToggle({ className }: ThemeToggleProps) {
   const [mounted, setMounted] = useState(false);
   const [customTheme, setCustomTheme] = useState<string | null>(null);
   
-  // Asegurarse de que el componente esté montado antes de realizar operaciones del lado del cliente
-  useEffect(() => {
-    setMounted(true);
-    
-    // Restaurar el tema personalizado si existe en localStorage o establecer blue-theme por defecto
-    if (typeof window !== 'undefined') {
-      const savedTheme = localStorage.getItem('selected-theme');
-      if (savedTheme && savedTheme !== 'light' && savedTheme !== 'dark' && savedTheme !== 'system') {
-        setCustomTheme(savedTheme);
-      } else {
-        // Establecer blue-theme como predeterminado si no hay tema guardado
-        setCustomTheme('blue-theme');
-        applyTheme('blue-theme');
-      }
-    }
-  }, []);
-
   // Aplicar un tema específico
   const applyTheme = useCallback((themeValue: string) => {
     // Solo ejecutar en el cliente
@@ -107,38 +90,29 @@ export default function ThemeToggle({ className }: ThemeToggleProps) {
         // Asegurarse de que next-themes sepa que estamos en modo claro
         setTheme('light');
       }
-      
-      // Forzar la aplicación de las fuentes definidas en el tema
-      // Esto asegura que las variables CSS de fuentes se apliquen correctamente
-      setTimeout(() => {
-        const computedStyle = getComputedStyle(document.documentElement);
-        const fontSans = computedStyle.getPropertyValue('--font-sans').trim();
-        const fontMono = computedStyle.getPropertyValue('--font-mono').trim();
-        const fontSerif = computedStyle.getPropertyValue('--font-serif').trim();
-        
-        // Aplicar las fuentes directamente al body para asegurar que se apliquen
-        if (fontSans) document.body.style.fontFamily = fontSans;
-        
-        // Actualizar las variables CSS globales
-        document.documentElement.style.setProperty('--font-sans-applied', fontSans);
-        document.documentElement.style.setProperty('--font-mono-applied', fontMono);
-        document.documentElement.style.setProperty('--font-serif-applied', fontSerif);
-        
-        // Forzar actualización de estilos
-        document.body.style.cssText += ' ';
-      }, 10); // Pequeño retraso para asegurar que las clases CSS se hayan aplicado
     } else {
       // Para temas estándar (light/dark/system), usar next-themes
       setTheme(themeValue);
       setCustomTheme(null);
-      
-      // Restablecer las fuentes a las predeterminadas
-      document.body.style.fontFamily = '';
-      document.documentElement.style.removeProperty('--font-sans-applied');
-      document.documentElement.style.removeProperty('--font-mono-applied');
-      document.documentElement.style.removeProperty('--font-serif-applied');
     }
   }, [theme, setTheme, setCustomTheme]);
+  
+  // Asegurarse de que el componente esté montado antes de realizar operaciones del lado del cliente
+  useEffect(() => {
+    setMounted(true);
+    
+    // Restaurar el tema personalizado si existe en localStorage o establecer blue-theme por defecto
+    if (typeof window !== 'undefined') {
+      const savedTheme = localStorage.getItem('selected-theme');
+      if (savedTheme && savedTheme !== 'light' && savedTheme !== 'dark' && savedTheme !== 'system') {
+        setCustomTheme(savedTheme);
+      } else {
+        // Establecer blue-theme como predeterminado si no hay tema guardado
+        setCustomTheme('blue-theme');
+        applyTheme('blue-theme');
+      }
+    }
+  }, [applyTheme]);
 
   // Asegurarse de que el componente solo se renderice en el cliente
   useEffect(() => {
