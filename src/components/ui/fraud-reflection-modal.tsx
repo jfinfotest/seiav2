@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { generateFraudReflection } from '@/lib/gemini-fraud-reflection';
+import { generateFraudReflection } from '@/lib/gemini-fraud-reflection c2';
 import { Loader2 } from 'lucide-react';
 
 interface FraudReflectionModalProps {

@@ -20,7 +20,8 @@ export async function generateFraudReflection(
 ): Promise<FraudReflectionResult> {
   try {
     // Inicializar la API de Google Gemini
-    const API_KEY = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY;
+    // const API_KEY = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY;
+    const API_KEY = '';
     if (!API_KEY) {
       console.error('API_KEY no configurada para Google Gemini');
       return {
@@ -79,6 +80,15 @@ export async function generateFraudReflection(
       model: model,
       contents: prompt
     });
+
+    if(!response) {
+      console.error('No se pudo generar la respuesta de Gemini');
+      return {
+        title: 'Alerta de Integridad',
+        message: 'Se ha detectado una acción inusual durante tu evaluación.',
+        suggestion: 'Continúa tu evaluación siguiendo las normas establecidas.'
+      };
+    }
 
     const text = response.text || '';
 
